@@ -127,3 +127,4 @@ LOGIN_REDIRECT_URL = '/'
 
 # send emails to the console output
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DATE_INPUT_FORMATS  = ['%d-%m-%Y', '%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d']
