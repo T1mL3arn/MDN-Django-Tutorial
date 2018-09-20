@@ -27,6 +27,8 @@
                     {% if user.is_staff %}
                         <hr>
                         <li><a href="{% url 'all-borrowed' %}">All borrowed</a></li>
+                        <li><a href="{% url 'author_create' %}">Create new author</a></li>
+                        <li><a href="{% url 'book-create' %}">Create new book</a></li>
                     {% endif %}
                 {% else %}
                     <li><a href="{% url 'login'%}?next={{request.path}}">Login</a></li>   

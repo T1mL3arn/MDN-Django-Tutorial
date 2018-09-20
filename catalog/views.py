@@ -120,16 +120,37 @@ from django.urls import reverse_lazy
 
 from catalog.models import Author
 
-# TODO all author-actions should be restricted to STAFF only
-# so you should add permissions
-class AuthorCreate(CreateView):
+class AuthorCreate(PermissionRequiredMixin, CreateView):
+    permission_required = 'catalog.can_mark_returned'
     model = Author
     fields = '__all__'
+    success_url = reverse_lazy('author_create')
 
-class AuthorUpdate(UpdateView):
+class AuthorUpdate(PermissionRequiredMixin, UpdateView):
+    permission_required = 'catalog.can_mark_returned'
     model = Author
     fields = ['first_name', 'last_name', 'date_of_birth', 'date_of_death']
 
-class AuthorDelete(DeleteView):
+class AuthorDelete(PermissionRequiredMixin, DeleteView):
+    permission_required = 'catalog.can_mark_returned'
     model = Author
     success_url = reverse_lazy('authors')
+
+class BookCreate(PermissionRequiredMixin, CreateView):
+    is_create = True
+    permission_required = 'catalog.can_mark_returned'
+    model = Book
+    fields = '__all__'
+    template_name = 'catalog/book_create_form.html'
+    
+class BookUpdate(PermissionRequiredMixin, UpdateView):
+    is_update = True
+    permission_required = 'catalog.can_mark_returned'
+    model = Book
+    fields = '__all__'
+    template_name = 'catalog/book_create_form.html'
+
+class BookDelete(PermissionRequiredMixin, DeleteView):
+    model = Book
+    permission_required = 'catalog.can_mark_returned'
+    success_url = reverse_lazy('books')
