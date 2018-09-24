@@ -4,6 +4,7 @@ from django.urls import reverse
 from catalog.models import Author
 
 class AuthorListViewTest(TestCase):
+    # setUpTestData makes set-up only once and for all the test-class
     @classmethod
     def setUpTestData(cls):
         # Create 13 authors for pagination tests
@@ -97,7 +98,10 @@ class LoanedBookInstancesByUserListViewTest(TestCase):
     def test_logged_in_uses_correct_template(self):
         login = self.client.login(username='testuser1', password='1X<ISRUkw+tuK')
         response = self.client.get(reverse('my-borrowed'))
-        
+        print(f'response: {response}')
+        print(f'login: {login}')
+        context_user = response.context['user']
+        print(f'context user: {context_user}')
         # Check our user is logged in
         self.assertEqual(str(response.context['user']), 'testuser1')
         # Check that we got a response "success"
@@ -289,3 +293,114 @@ class RenewBookInstancesViewTest(TestCase):
         response = self.client.post(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}), {'renewal_date': invalid_date_in_future})
         self.assertEqual(response.status_code, 200)
         self.assertFormError(response, 'form', 'renewal_date', 'Invalid date - renewal more than 4 weeks ahead')
+
+class AuthorCreateViewTest(TestCase):
+    
+    # what we have to test?
+    # DONE that url is accessible by uri location
+    # DONE that url is accessible by its name
+    # DONE that template for the view exists
+    # that adding of authors works
+    # that successfully addition redirects to the same page
+
+    def tearDown(self):
+        pass
+        # Clean up run after every test method.
+        # self.client.logout()
+
+    @classmethod
+    def setUpTestData(cls):
+        # first user with permission
+        cls.test_user1_name = 'testuser1'
+        cls.test_user1_pass = '!12345sFeqhq9'
+        cls.test_user1 = User.objects.create_user(username=cls.test_user1_name, password=cls.test_user1_pass)
+        
+        permission = Permission.objects.get(name='Set book as returned')
+        cls.test_user1.user_permissions.add(permission)
+        cls.test_user1.save()
+
+        # second user with no permissions
+        cls.test_user2_name = 'testuser2'
+        cls.test_user2_pass = '!12345sfeqqqg9'
+        cls.test_user2 = User.objects.create_user(username=cls.test_user2_name, password=cls.test_user2_pass)
+        cls.test_user2.save()
+
+    def test_redirect_if_not_logged_in(self):
+        response = self.client.get(reverse('author_create'))
+        print(f'Response: {response}; ')
+        print(f'User: {self.test_user1}; ')
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/accounts/login/?next=/catalog/author/create')
+        print('------------ separator ------------')
+
+    def test_logged_in_uses_correct_template(self):
+        login = self.client.login(username=self.test_user1_name, password=self.test_user1_pass)
+        print(f'login: {login}')
+
+        response = self.client.get(reverse('author_create'))
+        print(f'Response: {response}')
+        context = response.context
+        print(f'Context\'s user: {context["user"]}')
+        
+        # check is user logged in
+        self.assertEqual(str(response.context['user']), self.test_user1_name)
+        # Check that we got a response "success"
+        self.assertEqual(response.status_code, 200)
+        # Check we used correct template
+        self.assertTemplateUsed(response, 'catalog/author_form.html')
+        print('------------ separator ------------')
+
+    def test_forbidden_logged_in_with_wrong_permission(self):
+        # print all users
+        # users = User.objects.all()
+        # print('Total users count = ', users.count())
+        # for user in users:
+        #     print(user, user.password)
+
+        # login doesnt work =\ for all users =\ WTF ?
+        login = self.client.login(username=self.test_user2_name, password=self.test_user2_pass)
+        self.assertEqual(login, True, 'User2 isnt logged in')
+        
+        response = self.client.get(reverse('author_create'))
+        # print(f'logged in? {login}')
+        # print(f'Response: {response}')
+        self.assertEqual(response.status_code, 403)
+        print('------------ separator ------------')
+
+    def test_redirect_to_author_create_on_success(self):
+        self.assertTrue(self.client.login(username=self.test_user1_name,password=self.test_user1_pass), 'Cant login Test User 1')
+        fname = 'Leo'
+        lname = 'Tolstoy'
+        location = reverse('author_create')
+        response = self.client.post(location, {'first_name': fname, 'last_name': lname})
+        self.assertRedirects(response, location)
+        print('------------ separator ------------')
+
+    def test_author_added(self):
+        pass
+        # print all authors
+        for author in Author.objects.all():
+            print(author)
+
+        # read authors count
+        count = Author.objects.all().count()
+
+        self.assertTrue(self.client.login(username=self.test_user1_name,password=self.test_user1_pass), 'Cant login Test User 1')
+
+        # add new author
+        today = datetime.date.today()
+        future = datetime.date.today()+datetime.timedelta(days=77*365)
+        self.client.post(reverse('author_create'), {'first_name': 'Ivan', 'last_name': 'Ivanov', 'date_of_birth': today, 'date_of_death': future})
+        
+        # author count should be +1 more
+        self.assertEqual(Author.objects.count(), count+1)
+        
+        # added author should be accessible
+        author = Author.objects.get(first_name='Ivan', last_name='Ivanov')
+        # print('filtered', author, author.date_of_birth, author.date_of_death)
+        self.assertIsNotNone(author)
+        self.assertEqual(author.first_name, 'Ivan')
+        self.assertEqual(author.last_name, 'Ivanov')
+        self.assertEqual(author.date_of_birth, today)
+        self.assertEqual(author.date_of_death, future)
+        print('------------ separator ------------')
